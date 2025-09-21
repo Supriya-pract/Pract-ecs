@@ -1,0 +1,38 @@
+pipeline {
+agent any
+environment {
+AWS_REGION = "<AWS_REGION>"
+AWS_ACCOUNT = "<AWS_ACCOUNT_ID>"
+ECR_REPO_SVC1 = "service1"
+ECR_REPO_SVC2 = "service2"
+ECR_REPO_SVC3 = "service3"
+}
+stages {
+stage('Checkout') {
+steps { checkout scm }
+}
+stage('Build & Push images') {
+steps {
+script {
+def services = ['service1','service2','service3']
+for (s in services) {
+dir(s) {
+sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+sh "docker build -t ${s}:$BUILD_NUMBER ."
+sh "docker tag ${s}:$BUILD_NUMBER ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${s}:$BUILD_NUMBER"
+sh "docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${s}:$BUILD_NUMBER"
+}
+}
+}
+}
+}
+stage('Update ECS services') {
+steps {
+// either register new task def and update service or update via CloudFormation.
+sh 'echo "Registering task definitions and updating ECS services..."'
+// example for one service (expand as needed)
+sh "aws ecs update-service --cluster PractEcsCluster --service service1 --force-new-deployment --region ${AWS_REGION} || true"
+}
+}
+}
+}
