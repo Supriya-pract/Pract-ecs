@@ -1,0 +1,18 @@
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "vpc-0d88e335cb6a44356"
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: "subnet-0e9ac253f932e3b2b"
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: "subnet-08c484b5ed8016518"
+Outputs:
+  VpcId:
+    Value: !Ref VpcId
+  PublicSubnet1:
+    Value: !Ref PublicSubnet1
+  PublicSubnet2:
+    Value: !Ref PublicSubnet2
+

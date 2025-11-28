@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Common outputs for ECS project
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+
+Outputs:
+  ECSClusterName:
+    Description: "ECS Cluster Name"
+    Value: my-ecs-cluster
+    Export:
+      Name: ECS_ClusterName
+
+  ALBDNSName:
+    Description: "ALB DNS Name"
+    Value: !ImportValue ALB_DNSName
+
+  RDSAddress:
+    Description: "RDS Endpoint"
+    Value: !ImportValue RDS_Endpoint
+

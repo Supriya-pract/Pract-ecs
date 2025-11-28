@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: RDS MySQL Instance using Secrets Manager for credentials
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet::Id
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet::Id
+
+  RdsSecretArn:
+    Type: String
+    Description: "ARN of Secrets Manager secret for RDS credentials"
+
+Resources:
+  MyDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow MySQL access to ECS tasks"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: ecs-rds-sg
+
+  MyDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for RDS"
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      
+
+  MyDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: ecsdb
+      AllocatedStorage: 20
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: "8.0.40"
+
+      MasterUsername: !Join 
+        - ''
+        - [ '{{resolve:secretsmanager:', !Ref RdsSecretArn, ':SecretString:username}}' ]
+
+      MasterUserPassword: !Join 
+        - ''
+        - [ '{{resolve:secretsmanager:', !Ref RdsSecretArn, ':SecretString:password}}' ]
+
+      DBSubnetGroupName: !Ref MyDBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref MyDBSecurityGroup
+      MultiAZ: false
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 1
+      DeletionProtection: false
+
+Outputs:
+  RDSEndpoint:
+    Value: !GetAtt MyDB.Endpoint.Address
+    Export:
+      Name: RDSEndpoint
+

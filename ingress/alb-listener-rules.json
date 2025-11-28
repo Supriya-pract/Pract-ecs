@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "PathPattern": "/user/*",
+      "TargetGroupArn": "<USER_TARGET_GROUP_ARN>"
+    },
+    {
+      "PathPattern": "/order/*",
+      "TargetGroupArn": "<ORDER_TARGET_GROUP_ARN>"
+    },
+    {
+      "PathPattern": "/payment/*",
+      "TargetGroupArn": "<PAYMENT_TARGET_GROUP_ARN>"
+    }
+  ]
+}
+

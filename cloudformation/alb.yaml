@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ALB, security group and target groups for ECS services
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB security group (allow HTTP)
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: ecs-alb-sg
+
+  MyALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: ecs-alb
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Scheme: internet-facing
+      Type: application
+      IpAddressType: ipv4
+
+  UserTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: user-tg
+      Port: 3000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 20
+
+  OrderTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: order-tg
+      Port: 3001
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 20
+
+  PaymentTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: payment-tg
+      Port: 3002
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 20
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref MyALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: '404'
+            ContentType: text/plain
+            MessageBody: "Not Found"
+
+  # Listener rules for path-based routing
+  ListenerRuleUser:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HTTPListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/user/*"
+            - "/user"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref UserTargetGroup
+
+  ListenerRuleOrder:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HTTPListener
+      Priority: 20
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/order/*"
+            - "/order"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref OrderTargetGroup
+
+  ListenerRulePayment:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HTTPListener
+      Priority: 30
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/payment/*"
+            - "/payment"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref PaymentTargetGroup
+
+Outputs:
+  ALBDNSName:
+    Description: "ALB DNS Name"
+    Value: !GetAtt MyALB.DNSName
+    Export:
+      Name: ALBDNSName
+
+  ALBSecurityGroup:
+    Description: "ALB security group id"
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: ALBSecurityGroup
+
+  UserTargetGroupArn:
+    Description: "User target group ARN"
+    Value: !Ref UserTargetGroup
+    Export:
+      Name: UserTargetGroupArn
+
+  OrderTargetGroupArn:
+    Description: "Order target group ARN"
+    Value: !Ref OrderTargetGroup
+    Export:
+      Name: OrderTargetGroupArn
+
+  PaymentTargetGroupArn:
+    Description: "Payment target group ARN"
+    Value: !Ref PaymentTargetGroup
+    Export:
+      Name: PaymentTargetGroupArn
+
